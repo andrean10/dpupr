@@ -1,17 +1,35 @@
 'use strict';
 
-exports.ok = function (values, res, code) {
+exports.ok = function (message, res, values, code) {
     const codeResponse = code ? code : 200;
     
     var data = {
         'status': codeResponse,
-        'values': values
+        'message': message,
     };
+
+    if (values) {
+        data.values = values;
+    }
 
     res.status(codeResponse);
     res.json(data);
     res.end();
 }
+
+// exports.ok2 = function (message, res, values, code) {
+//     const codeResponse = code ? code : 200;
+    
+//     var data = {
+//         'status': codeResponse,
+//         'message': message,
+//         'insertId': values
+//     };
+
+//     res.status(codeResponse);
+//     res.json(data);
+//     res.end();
+// }
 
 exports.paging = (values, res, code) => {
     const codeResponse = code ? code : 200;
@@ -21,10 +39,10 @@ exports.paging = (values, res, code) => {
     res.end();
 }
 
-exports.failed = (values, code, res) => {
+exports.failed = (message, code, res) => {
     var data = {
         'status': code,
-        'values': values
+        'message': message
     }
 
     res.status(code);

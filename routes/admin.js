@@ -1,30 +1,83 @@
 const controller = require('../controller/admin');
-const express = require('express');
-const router = express.Router();
 
-// module.exports = (route) => {
-//     route.get('/', (req, res) => {
-//         res.send("Halaman Admin!");
-//     });
+module.exports = (app) => {
+    // program
+    app.route('/api/admin/program')
+        .get(controller.paginatedProgram, controller.showProgram)
+        .post(controller.addProgram);
 
-//     route.get('/:id', (req, res) => {
-//         res.send(req.params.id);
-//     });
-// }
+    app.route('/api/admin/program/:id')
+        .get(controller.showProgramById)
+        .put(controller.editProgram)
+        .delete(controller.deleteProgram);
 
-// program
-router.get('/', controller.index);
-router.get('/program', controller.program);
-router.get('/program/:id', controller.programById);
-router.post('/program', controller.addProgram);
-router.put('/program/:id', controller.editProgram);
-router.delete('/program/:id', controller.deleteProgram);
+    //kegiatan
+    app.route('/api/admin/kegiatan')
+        .get(controller.paginatedKegiatan, controller.showKegiatan)
+        .post(controller.addKegiatan);
 
-// kegiatan
-router.get('/kegiatan', controller.showKegiatan);
-router.get('/kegiatan/:id', controller.showKegiatanById);
-router.post('/kegiatan', controller.addKegiatan);
-router.put('/kegiatan/:id', controller.editKegiatan);
-router.delete('/kegiatan/:id', controller.deleteKegiatan);
+    app.route('/api/admin/kegiatan/:id')
+        .get(controller.showKegiatanById)
+        .put(controller.editKegiatan)
+        .delete(controller.deleteKegiatan);
 
-module.exports = router;
+    // pekerjaan
+    app.route('/api/admin/pekerjaan')
+        .get(controller.paginatedPekerjaan('pekerjaan'), controller.showPekerjaan)
+        .post(controller.addPekerjaan);
+
+    app.route('/api/admin/pekerjaan/:id')
+        .get(controller.showPekerjaanById)
+        .put(controller.editPekerjaan)
+        .patch(controller.editBerkasSurat)
+        .delete(controller.deletePekerjaan);
+
+    // pekerjaan
+    // surat
+    app.route('/api/admin/pekerjaan/:id/surat')
+        .get(controller.showSurat)
+        .put(controller.editSurat)
+        .delete(controller.deleteSurat);
+
+    // berkas pdf
+    app.route('/api/admin/pekerjaan/:id/berkaspdf')
+        .get(controller.showBerkasPdf)
+        .put(controller.editBerkasPDF)
+        .delete(controller.deleteBerkasPDF);
+
+    // kecamatan spinner
+    app.route('/api/admin/kecamatan')
+        .get(controller.showKecamatanSpinner);
+
+    // kelurahanataudesa spinner
+    app.route('/api/admin/kelurahanataudesa')
+        .get(controller.showKelurahanAtauDesa);
+
+    // kegiatan spinner
+    app.route('/api/admin/kegiatans')
+        .get(controller.showKegiatanSpinner);
+
+    // dokumentasi
+    app.route('/api/admin/pekerjaan/:id/dokumentasi')
+        .get(controller.showDokumentasiByIdPekerjaan)
+        .post(controller.addDokumentasi);
+
+    // dokumentasi by id 
+    app.route('/api/admin/pekerjaan/:id/dokumentasi/:idDokumentasi')
+        .get(controller.showDokumentasiDetailByIdPekerjaan)
+        .put(controller.editDokumentasiDetailByIdPekerjaan)
+        .delete(controller.deleteDokumentasiDetailByIdPekerjaan);
+
+    // pegawai
+    app.route('/api/admin/pegawai')
+        .get(controller.paginatedPegawai('users'), controller.showPegawai)
+        .post(controller.addPegawai);
+
+    app.route('/api/admin/pegawai/:id')
+        .get(controller.showPegawaiById)
+        .put(controller.editPegawai)
+        .delete(controller.deletePegawai);
+
+    app.route('/api/admin/pegawai/:id/picture')
+        .put(controller.changeFotoPegawai);
+}

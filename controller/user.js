@@ -1,21 +1,22 @@
-// const response = require('../res');
 const connection = require('../connection');
 const myqsl = require('mysql');
 const response = require('../res');
 const moment = require('moment');
-const fs = require('fs');
 const path = require('path');
 
 // Pekerjaan
 exports.showPekerjaan = (req, res) => {
     response.paging({
         'status': 200,
-        'page_counts': res.paginatedResults.length,
-        'values': res.paginatedResults
+        'page': res.page,
+        'per_page': res.paginatedPekerjaan.length,
+        'total': res.total,
+        'total_pages': res.totalPages,
+        'values': res.paginatedPekerjaan
     }, res);
 }
 
-exports.showPekerjaanById = (req, res, next) => {
+exports.showPekerjaanById = (req, res) => {
     let query = 'SELECT * FROM ?? WHERE ?? = ?';
     const table = ['pekerjaan', 'id_pekerjaan', req.params.id];
 
@@ -26,9 +27,17 @@ exports.showPekerjaanById = (req, res, next) => {
             return response.failed('Bad Request!', 400, res);
         } else {
             if (values.length > 0) {
-                response.ok(values, res);
+                values[0].tanggal_pekerjaan = validationDate(values[0].tanggal_pekerjaan);
+                values[0].created_at = validationDate(values[0].created_at);
+
+                if (values[0].updated_at) {
+                    values[0].updated_at = validationDate(values[0].updated_at);
+                }
+
+                response.ok('Data berhasil ditampilkan', res, values);
+
             } else {
-                response.ok('Data tidak ada', res);
+                return response.failed('Data tidak tersedia!', 404, res);
             }
         }
     });
@@ -63,7 +72,7 @@ exports.addPekerjaan = (req, res) => {
 }
 
 exports.editPekerjaan = (req, res) => {
-    const id = req.params.id;
+    const id = parseInt(req.params.id);
     const data = {
         tanggal_pekerjaan: req.body.tanggal_pekerjaan,
         nama_pekerjaan: req.body.nama_pekerjaan,
@@ -74,7 +83,7 @@ exports.editPekerjaan = (req, res) => {
         berkas: req.file,
         berkas2: req.file,
         berkas3: req.file,
-        berkas4: req.keteranganberkas3,
+        berkas4: req.file,
         berkas5: req.file,
         berkas6: req.file,
         berkas7: req.file,
@@ -137,10 +146,8 @@ exports.editPekerjaan = (req, res) => {
         updated_at: moment().format('YYYY-MM-DD')
     }
 
-    console.log(data.updated_at);
-
     let query = 'SELECT * FROM ?? WHERE ?? = ?';
-    const table = ['pekerjaan', 'id_pekerjaan', req.params.id];
+    const table = ['pekerjaan', 'id_pekerjaan', id];
 
     query = myqsl.format(query, table);
     connection.query(query, (error, values) => {
@@ -150,9 +157,13 @@ exports.editPekerjaan = (req, res) => {
         } else {
             if (values.length > 0) {
                 let query;
-                if (data.tanggal_pekerjaan && data.nama_pekerjaan && data.id_kecamatan && data.id_kelurahanataudesa && data.id_kegiatan, data.updated_at) {
+                if (data.tanggal_pekerjaan && data.nama_pekerjaan && data.id_kecamatan && data.id_kelurahanataudesa && data.id_kegiatan,
+                    data.updated_at) {
                     query = 'UPDATE ?? SET ?? = ?, ?? = ?, ?? = ?, ?? = ?, ?? = ?, ?? = ?, ?? = ? WHERE ?? = ?';
-                    const table = ['pekerjaan', 'tanggal_pekerjaan', data.tanggal_pekerjaan, 'nama_pekerjaan', data.nama_pekerjaan, 'id_kecamatan', data.id_kecamatan, 'id_kelurahanataudesa', data.id_kelurahanataudesa, 'updated_at', data.updated_at, 'id_kegiatan', req.params.id];
+                    const table = ['pekerjaan', 'tanggal_pekerjaan', data.tanggal_pekerjaan, 'nama_pekerjaan', data.nama_pekerjaan,
+                        'id_kecamatan', data.id_kecamatan, 'id_kelurahanataudesa', data.id_kelurahanataudesa, 'updated_at',
+                        data.updated_at, 'id_kegiatan', req.params.id
+                    ];
                     query = myqsl.format(query, table);
                 }
 
@@ -556,8 +567,37 @@ exports.editPekerjaan = (req, res) => {
                 return response.failed('Data tidak ditemukan!', 404, res);
             }
         }
-    })
+    });
+}
 
+exports.deletePekerjaan = (req, res) => {
+    const id = req.params.id;
+    let query = 'SELECT * FROM ?? WHERE ?? = ?';
+    const table = ['pekerjaan', 'id_pekerjaan', id];
+
+    query = myqsl.format(query, table);
+    connection.query(query, (error, values) => {
+        if (error) {
+            console.log(error);
+            return response.failed('Bad Request!', 400, res);
+        } else {
+            if (values.length > 0) {
+                let query = 'DELETE FROM ?? WHERE ?? = ?';
+
+                query = myqsl.format(query, table);
+                connection.query(query, (error) => {
+                    if (error) {
+                        console.log(error);
+                        return response.failed('Bad Request!', 400, res);
+                    } else {
+                        response.ok('Data pekerjaan berhasil dihapus!', res);
+                    }
+                });
+            } else {
+                return response.failed('Data tidak ditemukan!', 404, res);
+            }
+        }
+    })
 }
 
 // Profile
@@ -572,7 +612,15 @@ exports.showProfile = (req, res) => {
             return response.failed('Bad Request!', 400, res);
         } else {
             if (values.length > 0) {
-                response.ok(values, res);
+                let valuesIndexed = values[0];
+
+                valuesIndexed.created_at = validationDate(valuesIndexed.created_at);
+
+                if (valuesIndexed.updated_at) {
+                    valuesIndexed.updated_at = validationDate(valuesIndexed.updated_at);
+                }
+
+                response.ok('Data berhasil ditampilkan', res, values);
             } else {
                 return response.failed('Data tidak ditemukan!', 404, res);
             }
@@ -587,7 +635,9 @@ exports.editProfile = (req, res) => {
         username: req.body.username,
         password: req.body.password,
         alamat: req.body.alamat,
-        foto_profile: req.file
+        foto_profile: req.files,
+        updated_at: moment().format('YYYY-MM-DD')
+
     }
 
     let query = 'SELECT * FROM ?? WHERE ?? = ?';
@@ -627,14 +677,36 @@ exports.editProfile = (req, res) => {
                 }
 
                 if (data.foto_profile) {
+                    const file = data.foto_profile.foto_profile;
+                    const filename = file.name;
+                    const size = file.size;
+                    const extension = path.extname(filename);
+
+                    // allowed ext
+                    const filetypes = /jpeg|jpg|png|pdf/;
+                    // chech ext
+                    const extname = filetypes.test(extension.toLowerCase());
+                    const mimetype = filetypes.test(file.mimetype)
+
+                    if (!extname && !mimetype) {
+                        return response.failed("File tidak di dukung!", 400, res);
+                    }
+                    if (size > 3 * 1024 * 1024) {
+                        return response.failed("File harus kecil dari 3MB", 400, res);
+                    }
+
+                    // mengubah nama dari original file
+                    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                    const URL = `/uploads/pictuser-${uniqueSuffix}${path.extname(filename)}`;
+
                     newData = {
                         field: 'foto_profile',
-                        data: data.foto_profile
+                        data: URL
                     }
                 }
 
-                let query = 'UPDATE ?? SET ?? = ? WHERE ?? = ?';
-                const table = ['users', newData.field, newData.data, 'id_user', data.id];
+                let query = 'UPDATE ?? SET ?? = ?, ?? = ? WHERE ?? = ?';
+                const table = ['users', newData.field, newData.data, 'updated_at', data.updated_at, 'id_user', data.id];
 
                 query = myqsl.format(query, table);
                 connection.query(query, (error, values) => {
@@ -643,9 +715,16 @@ exports.editProfile = (req, res) => {
                         return response.failed('Bad Request!', 400, res);
                     } else {
                         if (values.changedRows > 0) {
+
+                            if (data.foto_profile) { // jika foto , pindahkan ke directory
+                                // move file
+                                const file = data.foto_profile.foto_profile;
+                                file.mv('./public' + newData.data)
+                            }
+
                             response.ok("Data Profile berhasil diperbarui!", res);
                         } else {
-                            return response.ok("Tidak ada perubahan pada data profile!", res);
+                            response.ok("Tidak ada perubahan pada data profile!", res);
                         }
                     }
                 });
@@ -656,40 +735,104 @@ exports.editProfile = (req, res) => {
     });
 }
 
-exports.paginatedResults = (model) => {
+exports.paginatedPekerjaan = (model) => {
     return (req, res, next) => {
         const page = parseInt(req.query.page) || 1; // default 1
-        const limit = parseInt(req.query.limit) || 10; // default 10
-        const offset = (page - 1) * limit;
+        const limit = parseInt(req.query.limit) || 7; // default 10
+        const inputNamaPekerjaan = req.query.namaPekerjaan; // default null
+        const inputTglPekerjaan = req.query.tanggalPekerjaan;
+        const firstDayOfMonth = moment().startOf('month').format('YYYY-MM-DD');
+        const lastDayOfMonth = moment().endOf('month').format('YYYY-MM-DD');
 
-        let query = 'SELECT ??, ??, ??, ??, ??, ??, ??, ?? FROM ?? JOIN ?? USING(??) JOIN ?? USING(??) JOIN ?? USING (??) LIMIT ? OFFSET ?';
-        const table = ['id_pekerjaan', 'tanggal_pekerjaan', 'nama_pekerjaan', 'kegiatan.nama_kegiatan', 'kecamatan.nama_kecamatan',
-            'kelurahanataudesa.nama_kelurahanataudesa', 'created_at', 'updated_at', model, 'kegiatan', 'id_kegiatan', 'kecamatan',
-            'id_kecamatan', 'kelurahanataudesa', 'id_kelurahanataudesa', limit, offset
-        ];
+        let query;
+        let table;
+        if (inputNamaPekerjaan) { // search by nama pekerjaan descending tanggal pekerjaan
+            query = 'SELECT ??, ??, ??, ??, ??, ??, ?? FROM ??' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? USING (??) ' +
+                'WHERE ?? LIKE ? ORDER BY ?? DESC ';
+            table = ['id_pekerjaan', 'tanggal_pekerjaan', 'nama_pekerjaan', 'kegiatan.nama_kegiatan', 'kecamatan.nama_kecamatan',
+                'kelurahanataudesa.nama_kelurahanataudesa', 'users.nama', model,
+                'kegiatan', 'kegiatan.id_kegiatan', 'pekerjaan.id_kegiatan',
+                'program', 'program.id_program', 'kegiatan.id_program',
+                'kelurahanataudesa', 'kelurahanataudesa.id_kelurahanataudesa', 'pekerjaan.id_kelurahanataudesa',
+                'kecamatan', 'kecamatan.id_kecamatan', 'kelurahanataudesa.id_kecamatan',
+                'users', 'id_user',
+                'nama_pekerjaan', `${inputNamaPekerjaan}%`, 'tanggal_pekerjaan'
+            ];
+        } else if (inputTglPekerjaan) { // search by tanggal pekerjaan
+            query = 'SELECT ??, ??, ??, ??, ??, ??, ??, ?? FROM ??' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? ON ?? = ?? ' +
+                'JOIN ?? USING (??) ' +
+                'WHERE ?? = ? ORDER BY ?? DESC ';
+            table = ['id_pekerjaan', 'tanggal_pekerjaan', 'nama_pekerjaan', 'kegiatan.nama_kegiatan', 'kecamatan.nama_kecamatan',
+                'kelurahanataudesa.nama_kelurahanataudesa', 'id_user', 'users.nama', model,
+                'kegiatan', 'kegiatan.id_kegiatan', 'pekerjaan.id_kegiatan',
+                'program', 'program.id_program', 'kegiatan.id_program',
+                'kelurahanataudesa', 'kelurahanataudesa.id_kelurahanataudesa', 'pekerjaan.id_kelurahanataudesa',
+                'kecamatan', 'kecamatan.id_kecamatan', 'kelurahanataudesa.id_kecamatan', 'users', 'id_user', 'tanggal_pekerjaan',
+                `${inputTglPekerjaan}`, 'tanggal_pekerjaan'
+            ];
+        } else { // data tanpa parameter ambil data pekerjaan bulan ini descending tanggal pekerjaan
+            query = 'SELECT ??, ??, ??, ??, ??, ??, ??, ?? FROM ??' +
+                'JOIN ?? ON ?? = ??' +
+                'JOIN ?? ON ?? = ??' +
+                'JOIN ?? ON ?? = ??' +
+                'JOIN ?? ON ?? = ??' +
+                'JOIN ?? USING (??) WHERE ?? >= ? AND ?? <= ? ORDER BY ?? DESC ';
+            table = ['id_pekerjaan', 'tanggal_pekerjaan', 'nama_pekerjaan', 'kegiatan.nama_kegiatan', 'kecamatan.nama_kecamatan',
+                'kelurahanataudesa.nama_kelurahanataudesa', 'id_user', 'users.nama', model,
+                'kegiatan', 'kegiatan.id_kegiatan', 'pekerjaan.id_kegiatan',
+                'program', 'program.id_program', 'kegiatan.id_program',
+                'kelurahanataudesa', 'kelurahanataudesa.id_kelurahanataudesa', 'pekerjaan.id_kelurahanataudesa',
+                'kecamatan', 'kecamatan.id_kecamatan', 'kelurahanataudesa.id_kecamatan', 'users', 'id_user', 'tanggal_pekerjaan', `${firstDayOfMonth}`, 'tanggal_pekerjaan', `${lastDayOfMonth}`, 'tanggal_pekerjaan'
+            ];
+        }
 
         query = myqsl.format(query, table);
+
+        console.log(query);
         connection.query(query, (error, values) => {
             if (error) {
                 console.log(error);
                 return response.failed('Bad Request!', 400, res);
             } else {
                 if (values.length > 0) {
-                    for (let i = 0; i < values.length; i++) {
-                        let valuesIndexed = values[i];
+                    const totalPages = Math.ceil(values.length / limit);
+                    const offset = (page - 1) * limit;
+                    const totalData = values.length;
 
-                        valuesIndexed.tanggal_pekerjaan = validationDate(valuesIndexed.tanggal_pekerjaan);
-                        valuesIndexed.created_at = validationDate(valuesIndexed.created_at);
+                    query += `LIMIT ${limit} OFFSET ${offset}`;
+                    connection.query(query, (error, values) => {
+                        if (error) {
+                            console.log(error);
+                            return response.failed('Bad Request!', 400, res);
+                        } else {
+                            if (values.length > 0) {
+                                for (let i = 0; i < values.length; i++) {
+                                    let valuesIndexed = values[i];
 
-                        if (valuesIndexed.updated_at) {
-                            valuesIndexed.updated_at = validationDate(valuesIndexed.updated_at);
+                                    valuesIndexed.tanggal_pekerjaan = validationDate(valuesIndexed.tanggal_pekerjaan);
+                                }
+
+                                res.totalPages = totalPages;
+                                res.page = page;
+                                res.total = totalData;
+                                res.paginatedPekerjaan = values;
+                                next();
+                            } else {
+                                return response.failed('Data tidak ditemukan!', 404, res);
+                            }
                         }
-                    }
-
-                    res.paginatedResults = values;
-                    next();
+                    });
                 } else {
-                    response.ok('Data tidak ditemukan!', res);
+                    return response.failed('Data tidak tersedia!', 404, res);
                 }
             }
         });
@@ -702,6 +845,6 @@ function checkPatchPekerjaan(execution) {
     return myqsl.format(query, table);
 }
 
-function validationDate(execution) {
-    return moment(execution).format('DD-M-YYYY');
+function validationDate(date) {
+    return moment(date).format('DD-M-YYYY');
 }
